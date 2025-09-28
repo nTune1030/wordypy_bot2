@@ -1,3 +1,7 @@
+# Create the implementation of the Letter class here
+
+
+# YOUR CODE HERE
 import random
 from PIL import Image, ImageFont, ImageDraw
 
@@ -23,8 +27,8 @@ class Letter:
     def is_in_correct_place(self) -> bool:
         """Returns True if the letter is in the correct place (for the GameEngine)."""
         return self.in_correct_place
-    
-# CELL
+
+# raise NotImplementedError()
 
 # This cell has the tests your Letter class
 
@@ -45,7 +49,6 @@ assert hasattr(
     l, "in_correct_place"
 ), "The letter object created has no in_correct_place attribute, but this should be False by default. Did you create this attribute?"
 
-# CELL
 
 class DisplaySpecification:
     """A dataclass for holding display specifications for WordyPy. The following
@@ -67,107 +70,97 @@ class DisplaySpecification:
     space_between_letters: int = 5
     word_color: str = "#FFFFFF"
 
-# CELL
-
 # Create the implementation of the Bot class here
 
-# YOUR CODE HERE
-class Bot:
-    """The Bot class represents a bot that can play WordyPy."""
-    
-    def __init__(self, word_list_file: str, display_spec: DisplaySpecification) -> None:
-        """Initializes the Bot with a list of possible words and a display specification."""
-        # Load the word list from the provided file
-        with open(word_list_file, 'r') as file:
-            self.word_list = [line.strip().upper() for line in file.readlines()]
-    
-        self.display_spec = display_spec
-        self.possible_words = self.word_list.copy()
-        self.last_guess = None
 
-    def _tuple_to_str(self, pixels: tuple) -> str:
+# YOUR CODE HERE
+from PIL import Image
+import random
+# import math
+
+class Bot:
+    def __init__(self, word_list_file: str, display_spec) -> None:
+        """Initializes the Bot with a list of possible words and display specs."""
+        self.word_list = []
+        with open(word_list_file, 'r') as file:
+            for word in file:
+                self.word_list.append(word.strip().upper())
+        self.display_spec = display_spec
+
+    @staticmethod
+    def _tuple_to_str(pixels: tuple) -> str:
         """Converts an RGB tuple to a hex color string."""
-        # Example: (0, 39, 76) -> "#00274C"
-        r, g, b = pixels
-        return f"#{r:02x}{g:02x}{b:02x}".upper() # Format as hex and uppercase
+        r, g, b = pixels[:3]
+        return f"#{r:02x}{g:02x}{b:02x}".upper()
 
     def _process_image(self, guess: str, guess_image: 'Image') -> list['Letter']:
         """Processes the guess image to extract letter feedback."""
-        
         feedback = []
-        
-        # Get dimensions and colors from the display specification for easier access
         block_w = self.display_spec.block_width
-        block_h = self.display_spec.block_height
         spacing = self.display_spec.space_between_letters
+        correct_color_hex = self.display_spec.correct_location_color.upper()
+        wrong_loc_color_hex = self.display_spec.incorrect_location_color.upper()
         
-        correct_color = self.display_spec.correct_location_color
-        wrong_loc_color = self.display_spec.incorrect_location_color
-        
-        # Loop through each of the 5 letters in the guess
         for i, char in enumerate(guess):
-            # 1. Calculate the coordinates of the center of the current letter's block
-            x = (block_w // 2) + i * (block_w + spacing)
-            y = block_h // 2
-            
-            # 2. Get the color of the pixel at that coordinate
+            x = 5 + i * (block_w + spacing)
+            y = 5 
             pixel_color_tuple = guess_image.getpixel((x, y))
-            pixel_color_hex = self._tuple_to_str(pixel_color_tuple)
+            pixel_color_hex = Bot._tuple_to_str(pixel_color_tuple)
             
-            # 3. Create a Letter object and set its flags based on the color
             letter_obj = Letter(char)
+            if pixel_color_hex == correct_color_hex:
+                letter_obj.in_correct_place = True
+                letter_obj.in_word = True
+            elif pixel_color_hex == wrong_loc_color_hex:
+                letter_obj.in_word = True
             
-            if pixel_color_hex == correct_color:
-                letter_obj.is_in_correct_place = True
-                letter_obj.is_in_word = True
-            elif pixel_color_hex == wrong_loc_color:
-                letter_obj.is_in_word = True
-            
-            # 4. Add the configured letter to our feedback list
             feedback.append(letter_obj)
-            
         return feedback
     
     def make_guess(self) -> str:
         """Makes a random guess from the list of possible words."""
-        guess = random.choice(self.word_list)
-        return guess
+        return random.choice(self.word_list)
 
-    def record_guess_results(self, guess: str, guess_results: Image) -> None:
+    def record_guess_results(self, guess: str, guess_image: 'Image') -> None:
         """Records the results of a guess to refine future guesses."""
-        # TODO: Wire up image processing to extract letter feedback
-        guess_results = self._process_image(guess, guess_results)
-        self.word_list.remove(guess)
-        
-        new_possible_words = []
+        guess_results = self._process_image(guess, guess_image)
+        if guess in self.word_list:
+            self.word_list.remove(guess)
 
+        new_possible_words = []
         for word in self.word_list:
             is_still_possible = True
+            for i, feedback in enumerate(guess_results):
+                char_in_guess = feedback.letter
 
-            for i, letter_feedback in enumerate(guess_results):
-                letter_char = letter_feedback.letter
+                # Rule 1: Green letters (correct place)
+                # --- FIX: Added parentheses to method calls ---
+                if feedback.is_in_correct_place():
+                    if word[i] != char_in_guess:
+                        is_still_possible = False
+                        break
                 
-                if letter_feedback.is_in_correct_place():
-                    if word[i] != letter_char:
+                # Rule 2: Yellow letters (in word, wrong place)
+                # --- FIX: Added parentheses to method calls ---
+                elif feedback.is_in_word():
+                    if char_in_guess not in word or word[i] == char_in_guess:
                         is_still_possible = False
                         break
-                elif letter_feedback.is_in_word():
-                    if letter_char not in word or word[i] == letter_char:
-                        is_still_possible = False
-                        break
+                
+                # Rule 3: Grey letters (not in word)
                 else:
-                    if letter_char in word:
+                    # --- FIX: Added parentheses to method calls ---
+                    is_positive_somewhere = any(
+                        char_in_guess == f.letter and f.is_in_word() for f in guess_results
+                    )
+                    if not is_positive_somewhere and char_in_guess in word:
                         is_still_possible = False
                         break
-
+            
             if is_still_possible:
                 new_possible_words.append(word)
-        
+
         self.word_list = new_possible_words
-
-    # raise NotImplementedError()
-
-# CELL
 
 from PIL import Image, ImageFont, ImageDraw
 import random
@@ -213,12 +206,24 @@ class GameEngine:
                     response = response + "?"
             return response
 
+        # # read in the dictionary of allowable words
+        # word_list: list(str) = list(
+        #     map(lambda x: x.strip().upper(), open(word_list_file, "r").readlines())
+        # )
+        
+        # # record the known correct positions
+        # known_letters: list(str) = [None, None, None, None, None]
+        # # set of unused letters
+        # unused_letters = set()
         # read in the dictionary of allowable words
-        word_list: list(str) = list(
+        # FIX: Use list[str] instead of list(str)
+        word_list: list[str] = list(
             map(lambda x: x.strip().upper(), open(word_list_file, "r").readlines())
         )
+        
         # record the known correct positions
-        known_letters: list(str) = [None, None, None, None, None]
+        # FIX: Use list[str | None] for a list that can hold both strings and None
+        known_letters: list[str | None] = [None, None, None, None, None]
         # set of unused letters
         unused_letters = set()
 
@@ -281,7 +286,8 @@ class GameEngine:
             img = self._format_results(results)
 
             print(f"Sending guess results to bot:\n")
-            display(img)
+            # display(img) -- commented out to avoid issues in non-notebook environments
+            img.show() # This will open the image in the default image viewer
 
             bot.record_guess_results(guess, img)
 
@@ -349,7 +355,7 @@ class GameEngine:
 
         # we will create a font object for drawing lettering
         FONT_SIZE: int = 50
-        font = ImageFont.truetype("assets/roboto_font/Roboto-Bold.ttf", FONT_SIZE)
+        font = ImageFont.truetype(r"C:\Users\ntune\AppData\Local\Microsoft\Windows\Fonts\Roboto-Bold.ttf", FONT_SIZE)
 
         # now we can draw the letter and tell PIL we want to have the
         # character centered in the box using the anchor attribute
@@ -388,15 +394,12 @@ class GameEngine:
             )
 
         return word
-    
-# CELL
 
 # Tests for Bot class.
 
 # Check if the Bot class exists
 assert "Bot" in dir(), "The Bot class does not exist, did you define it?"
 
-# CELL
 
 if __name__ == "__main__":
     # Chris's favorite words
@@ -415,4 +418,5 @@ if __name__ == "__main__":
 
     # Play a game with the Bot
     ge.play(bot, word_list_file=words_file)
+
 
