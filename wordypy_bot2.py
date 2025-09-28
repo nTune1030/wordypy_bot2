@@ -371,7 +371,7 @@ if __name__ == "__main__":
     words_file = "temp_file.txt"
     with open(words_file, "w") as file:
         file.writelines("\n".join(favorite_words))
-;
+
     # Create a new GameEngine with the default DisplaySpecification
     ge = GameEngine()
 
