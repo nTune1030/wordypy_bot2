@@ -85,15 +85,48 @@ class Bot:
         self.possible_words = self.word_list.copy()
         self.last_guess = None
 
-    def _tuple_to_str(self, pixels: str) -> str:
+    def _tuple_to_str(self, pixels: tuple) -> str:
         """Converts an RGB tuple to a hex color string."""
         # Example: (0, 39, 76) -> "#00274C"
         r, g, b = pixels
         return f"#{r:02x}{g:02x}{b:02x}".upper() # Format as hex and uppercase
 
-    def _process_image(self, guess: str, guess_image: Image) -> list[Letter]:
-        #TODO: Implement image processing to extract letter feedback
-        pass
+    def _process_image(self, guess: str, guess_image: 'Image') -> list['Letter']:
+        """Processes the guess image to extract letter feedback."""
+        
+        feedback = []
+        
+        # Get dimensions and colors from the display specification for easier access
+        block_w = self.display_spec.block_width
+        block_h = self.display_spec.block_height
+        spacing = self.display_spec.space_between_letters
+        
+        correct_color = self.display_spec.correct_location_color
+        wrong_loc_color = self.display_spec.incorrect_location_color
+        
+        # Loop through each of the 5 letters in the guess
+        for i, char in enumerate(guess):
+            # 1. Calculate the coordinates of the center of the current letter's block
+            x = (block_w // 2) + i * (block_w + spacing)
+            y = block_h // 2
+            
+            # 2. Get the color of the pixel at that coordinate
+            pixel_color_tuple = guess_image.getpixel((x, y))
+            pixel_color_hex = self._tuple_to_str(pixel_color_tuple)
+            
+            # 3. Create a Letter object and set its flags based on the color
+            letter_obj = Letter(char)
+            
+            if pixel_color_hex == correct_color:
+                letter_obj.is_in_correct_place = True
+                letter_obj.is_in_word = True
+            elif pixel_color_hex == wrong_loc_color:
+                letter_obj.is_in_word = True
+            
+            # 4. Add the configured letter to our feedback list
+            feedback.append(letter_obj)
+            
+        return feedback
     
     def make_guess(self) -> str:
         """Makes a random guess from the list of possible words."""
@@ -102,6 +135,8 @@ class Bot:
 
     def record_guess_results(self, guess: str, guess_results: Image) -> None:
         """Records the results of a guess to refine future guesses."""
+        # TODO: Wire up image processing to extract letter feedback
+        guess_results = self._process_image(guess, guess_results)
         self.word_list.remove(guess)
         
         new_possible_words = []
