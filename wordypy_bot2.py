@@ -1,4 +1,5 @@
 import random
+from PIL import Image, ImageFont, ImageDraw
 
 class Letter:
     '''A class representing a letter in a word game.'''
@@ -71,7 +72,65 @@ class DisplaySpecification:
 # Create the implementation of the Bot class here
 
 # YOUR CODE HERE
-raise NotImplementedError()
+class Bot:
+    """The Bot class represents a bot that can play WordyPy."""
+    
+    def __init__(self, word_list_file: str, display_spec: DisplaySpecification) -> None:
+        """Initializes the Bot with a list of possible words and a display specification."""
+        # Load the word list from the provided file
+        with open(word_list_file, 'r') as file:
+            self.word_list = [line.strip().upper() for line in file.readlines()]
+    
+        self.display_spec = display_spec
+        self.possible_words = self.word_list.copy()
+        self.last_guess = None
+
+    def _tuple_to_str(self, pixels: str) -> str:
+        """Converts an RGB tuple to a hex color string."""
+        # Example: (0, 39, 76) -> "#00274C"
+        r, g, b = pixels
+        return f"#{r:02x}{g:02x}{b:02x}".upper() # Format as hex and uppercase
+
+    def _process_image(self, guess: str, guess_image: Image) -> list[Letter]:
+        #TODO: Implement image processing to extract letter feedback
+        pass
+    
+    def make_guess(self) -> str:
+        """Makes a random guess from the list of possible words."""
+        guess = random.choice(self.word_list)
+        return guess
+
+    def record_guess_results(self, guess: str, guess_results: Image) -> None:
+        """Records the results of a guess to refine future guesses."""
+        self.word_list.remove(guess)
+        
+        new_possible_words = []
+
+        for word in self.word_list:
+            is_still_possible = True
+
+            for i, letter_feedback in enumerate(guess_results):
+                letter_char = letter_feedback.letter
+                
+                if letter_feedback.is_in_correct_place():
+                    if word[i] != letter_char:
+                        is_still_possible = False
+                        break
+                elif letter_feedback.is_in_word():
+                    if letter_char not in word or word[i] == letter_char:
+                        is_still_possible = False
+                        break
+                else:
+                    if letter_char in word:
+                        is_still_possible = False
+                        break
+
+            if is_still_possible:
+                new_possible_words.append(word)
+        
+        self.word_list = new_possible_words
+
+    # raise NotImplementedError()
 
 # CELL
 
